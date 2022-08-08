@@ -1,8 +1,9 @@
 import json
-
+from datetime import datetime
 from aiohttp import web
 from gino import Gino
 from asyncpg.exceptions import UniqueViolationError
+from sqlalchemy import ForeignKey
 
 PG_DSN = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
     host="localhost",
@@ -24,6 +25,16 @@ class UserModel(db.Model):
     password = db.Column(db.String, nullable=False)
 
     __idx1 = db.Index('app_users_username', 'username', unique=True)
+
+class AdModel(db.Model):
+    __tablename__ = 'ads'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=False)
+    create_date = db.Column(db.Datetime, default=datetime.now())
+    user = db.Column(db.Integer, nullable=False)
+
 
 
 class HTTPException(web.HTTPClientError):
@@ -101,6 +112,10 @@ class UserView(web.View):
                  'password': user.password}
             )
         raise NotFound(error='user does not exist')
+
+
+class AdView(web.View):
+    pass
 
 
 async def init_orm(app):
