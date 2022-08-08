@@ -3,7 +3,6 @@ from datetime import datetime
 from aiohttp import web
 from gino import Gino
 from asyncpg.exceptions import UniqueViolationError
-from sqlalchemy import ForeignKey
 
 PG_DSN = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
     host="localhost",
@@ -120,13 +119,34 @@ class UserView(web.View):
 class AdView(web.View):
 
     async def get(self):
-        pass
+        ad_id = self.request.match_info.get('ad_id', None)
+        if ad_id is not None:
+            ad = await AdModel.get(int(ad_id))
+            if ad is None:
+                raise NotFound(error='ad does not exist')
+            return web.json_response(
+                {'ad_id': ad.id,
+                 'title': ad.title,
+                 'description': ad.description,
+                 'user_name': ad.user,
+                 'create_date': ad.create_date.strftime('%d.%b.%Y T %H:%M:%S')}
+            )
+        all_ad = await db.all(AdModel.query)
+        response = [{'ad_id': i.id,
+                     'title': i.title,
+                     'description': i.description,
+                     'user_name': i.user,
+                     'create_date': i.create_date.strftime('%d.%b.%Y T %H:%M:%S')}
+                    for i in all_ad]
+
+        return web.json_response(response)
 
     async def post(self):
         ad_data = await self.request.json()
         user_name = ad_data.get('user', None)
         try:
-            user = await UserModel.get(username=user_name)
+
+            user = await UserModel.query.where(UserModel.username == user_name).gino.first()
             if user is not None:
                 new_ad = await AdModel.create(**ad_data)
             else:
@@ -137,15 +157,45 @@ class AdView(web.View):
             {'ad_id': new_ad.id,
              'title': new_ad.title,
              'description': new_ad.description,
-             'create_date': new_ad.create_date,
-             'user_name': new_ad.user}
+             'user_name': new_ad.user,
+             'create_date': new_ad.create_date.strftime('%d.%b.%Y T %H:%M:%S')}
         )
 
     async def patch(self):
-        pass
+        ad_id = self.request.match_info.get('ad_id', None)
+
+        if ad_id is not None:
+            ad = await AdModel.get(int(ad_id))
+            if ad is None:
+                raise NotFound(error='ad does not exist')
+            ad_data = await self.request.json()
+            update_ad = await ad.update(**ad_data).apply()
+            return web.json_response(
+                {'ad_id': ad.id,
+                 'title': ad.title,
+                 'description': ad.description,
+                 'user_name': ad.user,
+                 'create_date': ad.create_date.strftime('%d.%b.%Y T %H:%M:%S')}
+            )
+        raise NotFound(error='ad does not exist')
 
     async def delete(self):
-        pass
+        ad_id = self.request.match_info.get('ad_id', None)
+
+        if ad_id is not None:
+            ad = await AdModel.get(int(ad_id))
+            if ad is None:
+                raise NotFound(error='ad does not exist')
+            status = await ad.delete()
+            return web.json_response(
+                {'status': status,
+                 'ad_id': ad.id,
+                 'title': ad.title,
+                 'description': ad.description,
+                 'user_name': ad.user,
+                 'create_date': ad.create_date.strftime('%d.%b.%Y T %H:%M:%S')}
+            )
+        raise NotFound(error='ad does not exist')
 
 
 async def init_orm(app):
@@ -171,6 +221,9 @@ app.router.add_route('PATCH', '/user/{user_id:\d+}/', UserView)
 app.router.add_route('POST', '/user/', UserView)
 
 app.router.add_route('GET', '/ad/', AdView)
+app.router.add_route('GET', '/ad/{ad_id:\d+}/', AdView)
+app.router.add_route('PATCH', '/ad/{ad_id:\d+}/', AdView)
+app.router.add_route('DELETE', '/ad/{ad_id:\d+}/', AdView)
 app.router.add_route('POST', '/ad/', AdView)
 
 app.cleanup_ctx.append(init_orm)

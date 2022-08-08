@@ -28,14 +28,30 @@ async def update_user():
             print(await response.text())
 
 
-
-
 async def create_ad():
     async with aiohttp.ClientSession() as session:
         async with session.post('http://127.0.0.1:8080/ad/',
                                 json={'title': 'ad-1',
                                       'description': '1234sdadsasdsad',
-                                      'user': 'user_3' }) as response:
+                                      'user': 'user_3'}) as response:
+            print(await response.text())
+
+
+async def ads():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('http://127.0.0.1:8080/ad/1/') as response:
+            print(await response.text())
+
+
+async def delete_ad():
+    async with aiohttp.ClientSession() as session:
+        async with session.delete('http://127.0.0.1:8080/ad/3/') as response:
+            print(await response.text())
+
+
+async def update_ad():
+    async with aiohttp.ClientSession() as session:
+        async with session.patch('http://127.0.0.1:8080/ad/1/', json={'title': 'titletitle'}) as response:
             print(await response.text())
 
 
@@ -45,4 +61,7 @@ async def create_ad():
 # asyncio.run(update_user())
 
 
-asyncio.run(create_ad())
+# asyncio.run(create_ad())
+# asyncio.run(ads())
+# asyncio.run(delete_ad())
+# asyncio.run(update_ad())
