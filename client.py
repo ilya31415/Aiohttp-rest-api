@@ -27,8 +27,22 @@ async def update_user():
         async with session.patch('http://127.0.0.1:8080/user/7/', json={'username': 'big '}) as response:
             print(await response.text())
 
+
+
+
+async def create_ad():
+    async with aiohttp.ClientSession() as session:
+        async with session.post('http://127.0.0.1:8080/ad/',
+                                json={'title': 'ad-1',
+                                      'description': '1234sdadsasdsad',
+                                      'user': 'user_3' }) as response:
+            print(await response.text())
+
+
 # asyncio.run(create_user())
 # asyncio.run(user())
 # asyncio.run(delete_user())
 # asyncio.run(update_user())
 
+
+asyncio.run(create_ad())

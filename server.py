@@ -26,15 +26,17 @@ class UserModel(db.Model):
 
     __idx1 = db.Index('app_users_username', 'username', unique=True)
 
+
 class AdModel(db.Model):
     __tablename__ = 'ads'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
-    create_date = db.Column(db.Datetime, default=datetime.now())
-    user = db.Column(db.Integer, nullable=False)
+    create_date = db.Column(db.DateTime, default=datetime.now())
+    user = db.Column(db.String, nullable=False)
 
+    user_fk = db.ForeignKeyConstraint(['user'], ['users.username'])
 
 
 class HTTPException(web.HTTPClientError):
@@ -78,10 +80,10 @@ class UserView(web.View):
         except UniqueViolationError:
             raise BadRequest(error='User already exists')
         return web.json_response(
-                {'user_id': new_user.id,
-                 'username': new_user.username,
-                 'password': new_user.password}
-            )
+            {'user_id': new_user.id,
+             'username': new_user.username,
+             'password': new_user.password}
+        )
 
     async def delete(self):
 
@@ -109,13 +111,41 @@ class UserView(web.View):
             return web.json_response(
                 {'user_id': user.id,
                  'username': user.username,
-                 'password': user.password}
+                 'password': user.password,
+                 }
             )
         raise NotFound(error='user does not exist')
 
 
 class AdView(web.View):
-    pass
+
+    async def get(self):
+        pass
+
+    async def post(self):
+        ad_data = await self.request.json()
+        user_name = ad_data.get('user', None)
+        try:
+            user = await UserModel.get(username=user_name)
+            if user is not None:
+                new_ad = await AdModel.create(**ad_data)
+            else:
+                raise BadRequest(error='there is no user with this name')
+        except UniqueViolationError:
+            raise BadRequest(error='Ad already exists')
+        return web.json_response(
+            {'ad_id': new_ad.id,
+             'title': new_ad.title,
+             'description': new_ad.description,
+             'create_date': new_ad.create_date,
+             'user_name': new_ad.user}
+        )
+
+    async def patch(self):
+        pass
+
+    async def delete(self):
+        pass
 
 
 async def init_orm(app):
@@ -139,6 +169,10 @@ app.router.add_route('GET', '/user/', UserView)
 app.router.add_route('DELETE', '/user/{user_id:\d+}/', UserView)
 app.router.add_route('PATCH', '/user/{user_id:\d+}/', UserView)
 app.router.add_route('POST', '/user/', UserView)
+
+app.router.add_route('GET', '/ad/', AdView)
+app.router.add_route('POST', '/ad/', AdView)
+
 app.cleanup_ctx.append(init_orm)
 
 web.run_app(app)
